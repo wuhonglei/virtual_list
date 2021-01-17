@@ -6,7 +6,7 @@
 		<div
 			class="list-view-phantom"
 			:style="{
-         height: contentHeight
+         height: `${contentHeight()}px`
       }"
 		>
 		</div>
@@ -17,7 +17,7 @@
 			<div
 				class="list-view-item"
 				:key="item.value"
-				:style="getRandomStyle(item.value)"
+				:style="{height: getRandomStyle(item).height + 'px', backgroundColor: getRandomStyle(item).backgroundColor}"
 				v-for="item in visibleData"
 			>
 				{{ item.value }}
@@ -40,13 +40,6 @@ export default {
 			default: 30
 		}
 	},
-
-	computed: {
-		contentHeight() {
-			return this.data.length * this.itemHeight + 'px';
-		}
-	},
-
 	mounted() {
 		this.updateVisibleData();
 	},
@@ -59,49 +52,75 @@ export default {
 
 	methods: {
 		updateVisibleData(scrollTop) {
-			scrollTop = scrollTop || 0;
-			/**
-			 * clientheight=padding+height-横向滚动轴高度
-			 *
-			 * Math.ceil 表示取顶，例如 Math.ceil(2.1) -> 3
-			 */
-			const visibleCount = Math.ceil(this.$el.clientHeight / this.itemHeight);
-
-			/**
-			 * scrollTop 表示元素在有滚动条时，滚动条向下滚动的距离也就是元素顶部被遮住部分的高度,不带单位
-			 * 没有滚动条时，元素的 scrollTop 恒为 0
-			 *
-			 * itemHeight = 10
-			 * 场景1：
-			 * scrollTop = 10
-			 * 则 start 为 1
-			 *
-			 * 场景2:
-			 * scrollTop = 5
-			 * 则 start 为 0
-			 */
-			const start = Math.floor(scrollTop / this.itemHeight);
-      const end = start + visibleCount + 1; // visibleCount = 14
-			this.visibleData = this.data.slice(start, end); // 获取可见区域的元素列表
+      scrollTop = scrollTop || 0;
+			const start = this.findNearestItemIndex(scrollTop);
+			const end = this.findNearestItemIndex(scrollTop + this.$el.clientHeight) + 10;
+			this.visibleData = this.data.slice(start, Math.min(end + 1, this.data.length)); // 获取可见区域的元素列表
 			/**
 			 * 滚动条向下滑动过程中，整个容器的区域向上滑动，此时 content 内容区为了抵抗这种运动，需要整体向下移动
 			 */
-			this.$refs.content.style.transform = `translateY(${start * this.itemHeight}px)`;
+			this.$refs.content.style.transform = `translateY(${this.getItemSizeAndOffset(start).offset}px)`;
 		},
 
-		getRandomStyle(value) {
+		getRandomStyle({value}) {
 			let colors = ['red', 'blue', 'white', 'orange'];
-			let heights = ['25px', '30px', '40px', '50px'];
-			let index = (value % 4);
+			let heights = [25, 30, 40, 50];
+      let index = (value % 4);
+
 			return {
 				backgroundColor: colors[index],
-				height: '30px'
+				height: heights[index]
 			};
 		},
 
 		handleScroll() {
 			const scrollTop = this.$el.scrollTop;
 			this.updateVisibleData(scrollTop);
+		},
+
+		// 计算内容总高度
+		contentHeight() {
+			const { data, getRandomStyle } = this;
+			let total = 0;
+			for (let i = 0, j = data.length; i < j; i++) {
+				total += getRandomStyle(data[i]).height;
+      }
+			return total;
+		},
+
+		// 计算指定滚动距离对应的起始索引值
+		findNearestItemIndex(scrollTop) {
+			const { data, getRandomStyle } = this;
+			let total = 0;
+			for (let i = 0, j = data.length; i < j; i++) {
+				const size = getRandomStyle(data[i]).height;
+				total += size;
+				if (total >= scrollTop || i === j - 1) {
+					return i;
+				}
+			}
+
+			return 0;
+		},
+		getItemSizeAndOffset(index) {
+			const { data, getRandomStyle } = this;
+			let total = 0;
+			for (let i = 0, j = Math.min(index, data.length - 1); i <= j; i++) {
+				const size = getRandomStyle(data[i]).height;
+
+				if (i === j) {
+					return {
+						offset: total,
+						size
+					};
+				}
+				total += size;
+			}
+
+			return {
+				offset: 0,
+				size: 0
+			};
 		}
 	}
 }
@@ -109,7 +128,7 @@ export default {
 
 <style lang="postcss" scoped>
 .list-view {
-	height: 300px;
+	height: 400px;
 	overflow: auto;
 	position: relative;
 	border: 1px solid #aaa;
