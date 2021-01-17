@@ -81,7 +81,7 @@ export default {
 			 * 则 start 为 0
 			 */
 			const start = Math.floor(scrollTop / this.itemHeight);
-      const end = start + visibleCount; // visibleCount = 14
+      const end = start + visibleCount + 1; // visibleCount = 14
 			this.visibleData = this.data.slice(start, end); // 获取可见区域的元素列表
 			/**
 			 * 滚动条向下滑动过程中，整个容器的区域向上滑动，此时 content 内容区为了抵抗这种运动，需要整体向下移动
@@ -109,7 +109,7 @@ export default {
 
 <style lang="postcss" scoped>
 .list-view {
-	height: 400px;
+	height: 300px;
 	overflow: auto;
 	position: relative;
 	border: 1px solid #aaa;
